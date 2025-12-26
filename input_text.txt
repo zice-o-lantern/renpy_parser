@@ -7,7 +7,39 @@
 [Narration] *thud*
 [player] ouch!
 
+[[Jeff's House]]
+
 [Narration] ...
+
+*Comment dominer le monde ?*:Choix Tres Important
+    -> Tuer des gens :
+        Moi je suis chaud
+        JOHN
+	J'en suis pas sûr lol
+    -> Séduire le maître du monde :
+        Là ça me plait plus
+	MOI:Pas moi
+        Pas moi
+
+**:Choix Tres Important
+    -> Tuer des gens :
+        Moi je suis chaud
+        JOHN
+	J'en suis pas sûr lol
+    -> Séduire le maître du monde :
+        Là ça me plait plus
+	MOI:Pas moi
+        Pas moi
+
+**
+    -> Tuer des gens :
+        Moi je suis chaud
+        JOHN
+	J'en suis pas sûr lol
+    -> Séduire le maître du monde :
+        Là ça me plait plus
+	MOI:Pas moi
+        Pas moi
 
 Test pour savoir si le narrateur pourrait fonctionner comme ca lol
 [show outside]

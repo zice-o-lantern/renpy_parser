@@ -17,6 +17,7 @@ class Parser():
         self.characters = set()
         self.character_id = ''
         self.character_name = ''
+        self.indent_level = 0
         
         # a dictionary of lists, the key is the file name, the value is a list
         # of lines. This will be held in ram because even if its a coupe of GB
@@ -38,6 +39,9 @@ class Parser():
         self.title_pattern = re.compile(r'^\>\>\s*(.+)')
         self.comment_pattern = re.compile(r'^#\s*(.+)')
         self.name_pattern = re.compile(r'(^[A-Z][A-Z].+?)(?::(.+?))?\s*$')
+        self.menu_pattern = re.compile(r'(^\*.+?)(?::(.+?))?\s*$')
+        self.option_pattern = re.compile(r'^\->\s*(.+)$')
+        self.jump_pattern = re.compile(r'^\[\[(.*?)\]\]\s*$')
 
     def parse_line(self, file: str, line: str) -> None:
         """ accepts the next line, parses it and stores it internally in ram
@@ -47,11 +51,17 @@ class Parser():
         :param line: line to parse
         :type line: str
         """
+        if (line == '\n'):
+            l = FS + line # empty line
+            self.indent_level = 1  # reset the indent level
+            self.output[file].append(l)
+            return
         # calls the matcher and hands it to the specific type of parser
-        if (m := self.oldSpoken_pattern.match(line)):
+        # line = line.strip()  # remove leading spaces for easier parsing
+        if (m := self.jump_pattern.match(line)):
+            l = self._parse_jump(m)
+        elif (m := self.oldSpoken_pattern.match(line)):
             l = self._parse_oldSpoken(m)
-        # elif (m := self.spoken_pattern.match(line)):
-        #     l = self._parse_spoken(m)
         elif (m := self.command_pattern.match(line)):
             l = self._parse_commands(m)
         elif (m := self.title_pattern.match(line)):
@@ -61,8 +71,10 @@ class Parser():
         elif (m := self.name_pattern.match(line)):
             self._parse_name(m)
             l = ''  # no output for this line
-        elif (line == '\n'):
-            l = FS + line # empty line
+        elif (m := self.menu_pattern.match(line)):
+            l = self._parse_menu(m)
+        elif (m := self.option_pattern.match(line)):
+            l = self._parse_options(m)
         else:
             l = self._parse_spoken(line)
             
@@ -115,6 +127,7 @@ class Parser():
         """
         
         # get the label from the matcher
+        self.indent_level = 1
         label = matcher[1]
         
         # swap spaces with underscores
@@ -157,7 +170,7 @@ class Parser():
             
         return output
     
-    def _parse_name(self, matcher: re.Match) -> str:
+    def _parse_name(self, matcher: re.Match) -> None:
         """ parses the line and returns the line,
             also stores the speaker to the characters list.
         :param matcher: matcher from the line
@@ -165,7 +178,6 @@ class Parser():
         :return: parsed line
         :rtype: str
         """
-        print(matcher.groups())
         # get the data from the matcher
         char = matcher[1]
         name = matcher[2]
@@ -194,11 +206,17 @@ class Parser():
             self.characters.add(name)
             self.character_id = ''  # reset the name after use
             output = name + ' ' + output
-        
-        output = FS + output
+
+        for i in range(self.indent_level):  # indent once
+            output = FS + output
     
         if self.character_name != '':
-            name_line = f'{FS}$ {name}.name = \'{self.character_name}\'\n'
+            name_line = f'$ {name}.name = \'{self.character_name}\'\n'
+            # name_line = f'{FS}$ {name}.name = \'{self.character_name}\'\n'
+
+            for i in range(self.indent_level):  # indent once
+                name_line = FS + name_line
+                
             output = name_line + output
             self.character_name = ''  # reset the name after use
         
@@ -217,7 +235,74 @@ class Parser():
         # self.logger.warning(f'command not implemented: {matcher[1]}')
         # return f'# {matcher[1]}\n'
         return f'{FS}{matcher[1]}\n'
+
+    def _parse_menu(self, matcher: re.Match) -> str:
+        """ reads a question line and parses it somehow, todo
+
+        :param matcher: matcher object of the contents of the question
+        :type matcher: re.Match
+        :return: parsed line
+        :rtype: str
+        """
+        output ='menu'
+        if matcher[2]:
+            menu_name = matcher[2].removeprefix(':').lower().replace(' ', '_').strip()
+            output += ' ' + menu_name
+        output += ':\n'
+
+        for i in range(self.indent_level):
+            output = FS + output
+        
+        self.indent_level += 1  # increase the indent for the options
+
+        if matcher[1]:
+            question = matcher[1].removeprefix('*').removesuffix('*').strip()
+            if question == '':
+                return output  # no question to add
+            for i in range(self.indent_level):
+                question = FS + question
+            output += question + ':\n'
+        return output
     
+    
+    def _parse_options(self, matcher: re.Match) -> str:
+        """ reads a question line and parses it somehow, todo
+
+        :param matcher: matcher object of the contents of the question
+        :type matcher: re.Match
+        :return: parsed line
+        :rtype: str
+        """
+        self.indent_level = 2  # options are always indented twice
+
+        option = matcher[1].removeprefix('->').removesuffix(':').strip()
+        option = f'\"{option}\"'
+        for i in range(self.indent_level):
+            option = FS + option
+        output = option + ':\n'
+
+        self.indent_level += 1  # increase the indent for the option content
+
+        return output
+
+    def _parse_jump(self, matcher: re.Match) -> str:
+        """ reads a jump line and parses it somehow, todo
+
+        :param matcher: matcher object of the contents of the question
+        :type matcher: re.Match
+        :return: parsed line
+        :rtype: str
+        """
+        print("prout")
+        jump_target = matcher[1].strip().removesuffix(']').removesuffix(']').removeprefix('[').removeprefix('[').lower().strip()
+        jump_target = jump_target.replace(' ', '_')
+        jump_target = jump_target.replace('\'', '_')
+        output = f'jump {jump_target}\n'
+
+        for i in range(self.indent_level):
+            output = FS + output
+        return output
+
     def _parse_comment(self, line: str) -> str:
         # this one accepts a line cause its not doing a regex
         """ parse the line as a comment, accepts comments that start with a #
