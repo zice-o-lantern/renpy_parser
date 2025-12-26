@@ -6,13 +6,18 @@
 [Narration] I groaned and rolled out onto the floor
 [Narration] *thud*
 [player] ouch!
+
 [Narration] ...
+
 Test pour savoir si le narrateur pourrait fonctionner comme ca lol
 [show outside]
 [Narration] I finaly made it outside
 [jeff:???] What took you so long sleepy head
 [Narration] who was that?
+TEST
 Je "teste"
 [Narration] I looked across and a tall blond boy was standing there
+PERSONNAGE BIZARRE:Jacques du Quarante
+J'ai un nom mystérieux n'est ce pas ?
 # jeff is introducing himself to the player
 [jeff:jeff] Still asleep [player]? its me jeff

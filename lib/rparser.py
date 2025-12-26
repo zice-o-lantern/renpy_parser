@@ -15,6 +15,8 @@ class Parser():
 
         # these are the characters that are part of the script.
         self.characters = set()
+        self.character_id = ''
+        self.character_name = ''
         
         # a dictionary of lists, the key is the file name, the value is a list
         # of lines. This will be held in ram because even if its a coupe of GB
@@ -35,17 +37,16 @@ class Parser():
         # gets the title pattern, >> title
         self.title_pattern = re.compile(r'^\>\>\s*(.+)')
         self.comment_pattern = re.compile(r'^#\s*(.+)')
-    
+        self.name_pattern = re.compile(r'(^[A-Z][A-Z].+?)(?::(.+?))?\s*$')
+
     def parse_line(self, file: str, line: str) -> None:
         """ accepts the next line, parses it and stores it internally in ram
-
         :param file: file from where the line came. really just has to be a
-                     unique identifier
+            unique identifier
         :type file: str
         :param line: line to parse
         :type line: str
         """
-        
         # calls the matcher and hands it to the specific type of parser
         if (m := self.oldSpoken_pattern.match(line)):
             l = self._parse_oldSpoken(m)
@@ -57,7 +58,12 @@ class Parser():
             l = self._parse_title(m)
         elif (m := self.comment_pattern.match(line)):
             l = self._parse_comment(line)
-        else:            
+        elif (m := self.name_pattern.match(line)):
+            self._parse_name(m)
+            l = ''  # no output for this line
+        elif (line == '\n'):
+            l = FS + line # empty line
+        else:
             l = self._parse_spoken(line)
             
         # add the line
@@ -117,11 +123,10 @@ class Parser():
         # produce the code and return
         output = f'label {label}:\n'  # label xyz:
         return output
-    
+
     def _parse_oldSpoken(self, matcher: re.Match) -> str:
         """ parses the line and returns the line,
             also stores the speaker to the characters list.
-
         :param matcher: matcher from the line
         :type matcher: re.Match
         :return: parsed line
@@ -152,10 +157,25 @@ class Parser():
             
         return output
     
+    def _parse_name(self, matcher: re.Match) -> str:
+        """ parses the line and returns the line,
+            also stores the speaker to the characters list.
+        :param matcher: matcher from the line
+        :type matcher: re.Match
+        :return: parsed line
+        :rtype: str
+        """
+        print(matcher.groups())
+        # get the data from the matcher
+        char = matcher[1]
+        name = matcher[2]
+
+        self.character_id = char.lower().replace(' ', '_').strip()
+        self.character_name = name.strip() if name else ''
+
     def _parse_spoken(self, line: str) -> str:
         """ parses the line and returns the line,
             also stores the speaker to the characters list.
-
         :param matcher: matcher from the line
         :type matcher: re.Match
         :return: parsed line
@@ -164,10 +184,25 @@ class Parser():
         
         # get the data from the matcher
         # cleaning the output and parsing the line
-        line = line.replace('"', '\"')
-        line = line.strip()
-        print(f'{FS}\"{line}\"')
-        return f'{FS}\"{line}\"'
+        l = line
+        l = l.replace('"', '\\"')
+
+        l = l.strip()
+        output = f'\"{l}\"'
+        if self.character_id != '':
+            name = self.character_id
+            self.characters.add(name)
+            self.character_id = ''  # reset the name after use
+            output = name + ' ' + output
+        
+        output = FS + output
+    
+        if self.character_name != '':
+            name_line = f'{FS}$ {name}.name = \'{self.character_name}\'\n'
+            output = name_line + output
+            self.character_name = ''  # reset the name after use
+        
+        return output + '\n'
     
     def _parse_commands(self, matcher: re.Match) -> str:
         """ reads a command line and parses it somehow, todo
@@ -179,8 +214,9 @@ class Parser():
         """
         
         # don't need to figure this out just yet
-        self.logger.warning(f'command not implemented: {matcher[1]}')
-        return f'# {matcher[1]}\n'
+        # self.logger.warning(f'command not implemented: {matcher[1]}')
+        # return f'# {matcher[1]}\n'
+        return f'{FS}{matcher[1]}\n'
     
     def _parse_comment(self, line: str) -> str:
         # this one accepts a line cause its not doing a regex
@@ -192,7 +228,6 @@ class Parser():
         :return: parsed line
         :rtype: str
         """
-        print(line)
         if line.startswith('#'):  # true comment
             return f'{FS}{line.strip()}\n'  # force the whitespace to be 1 tab
         
