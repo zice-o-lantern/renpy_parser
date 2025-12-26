@@ -28,12 +28,13 @@ class Parser():
         # matches the character variable, optional given name, and any spoken
         # line
         # [character:name] text -> character, name, text
-        self.spoken_patten = re.compile(r'^\[(.+?)(?::(.+?))?\]\s*(.+)\s*$')
+        self.oldSpoken_pattern = re.compile(r'^\[(.+?)(?::(.+?))?\]\s*(.+)\s*$')
         # haven't really played with this one yet, just gets the things in the
         # brackets
         self.command_pattern = re.compile(r'^\[(.+)\]\s*$')
         # gets the title pattern, >> title
         self.title_pattern = re.compile(r'^\>\>\s*(.+)')
+        self.comment_pattern = re.compile(r'^#\s*(.+)')
     
     def parse_line(self, file: str, line: str) -> None:
         """ accepts the next line, parses it and stores it internally in ram
@@ -46,14 +47,18 @@ class Parser():
         """
         
         # calls the matcher and hands it to the specific type of parser
-        if (m := self.spoken_patten.match(line)):
-            l = self._parse_spoken(m)
+        if (m := self.oldSpoken_pattern.match(line)):
+            l = self._parse_oldSpoken(m)
+        # elif (m := self.spoken_pattern.match(line)):
+        #     l = self._parse_spoken(m)
         elif (m := self.command_pattern.match(line)):
             l = self._parse_commands(m)
         elif (m := self.title_pattern.match(line)):
             l = self._parse_title(m)
-        else:
+        elif (m := self.comment_pattern.match(line)):
             l = self._parse_comment(line)
+        else:            
+            l = self._parse_spoken(line)
             
         # add the line
         self.output[file].append(l)
@@ -113,7 +118,7 @@ class Parser():
         output = f'label {label}:\n'  # label xyz:
         return output
     
-    def _parse_spoken(self, matcher: re.Match) -> str:
+    def _parse_oldSpoken(self, matcher: re.Match) -> str:
         """ parses the line and returns the line,
             also stores the speaker to the characters list.
 
@@ -147,6 +152,23 @@ class Parser():
             
         return output
     
+    def _parse_spoken(self, line: str) -> str:
+        """ parses the line and returns the line,
+            also stores the speaker to the characters list.
+
+        :param matcher: matcher from the line
+        :type matcher: re.Match
+        :return: parsed line
+        :rtype: str
+        """
+        
+        # get the data from the matcher
+        # cleaning the output and parsing the line
+        line = line.replace('"', '\"')
+        line = line.strip()
+        print(f'{FS}\"{line}\"')
+        return f'{FS}\"{line}\"'
+    
     def _parse_commands(self, matcher: re.Match) -> str:
         """ reads a command line and parses it somehow, todo
 
@@ -170,26 +192,12 @@ class Parser():
         :return: parsed line
         :rtype: str
         """
-        
+        print(line)
         if line.startswith('#'):  # true comment
             return f'{FS}{line.strip()}\n'  # force the whitespace to be 1 tab
         
         # not a true comment
         self.logger.warning(f'Unable to parse as a line {line}\nparsing as comment')
         return f'# {line}\n'  # don't indent so it is clear
-    
-    # i changed the way that matching works and now i don't need to do error
-    # handling so i don't need this anymore
-    def __parseas_comment(self, line: re.Match) -> str:
-        """ parses any miscelaneous line as a comment, raising a warning.
-            this is intended to be used on lines that were unable to be parsed, 
-            but may have other uses
-
-        :param line: line to be parsed
-        :type line: str
-        :return: output line - unindented comment
-        :rtype: str
-        """
-        pass
     
     
