@@ -34,9 +34,11 @@ class Parser():
         self.oldSpoken_pattern = re.compile(r'^\[(.+?)(?::(.+?))?\]\s*(.+)\s*$')
         # haven't really played with this one yet, just gets the things in the
         # brackets
-        self.command_pattern = re.compile(r'^\[(.+)\]\s*$')
+        # self.command_pattern = re.compile(r'^\[(.+)\]\s*$')
+        self.command_pattern = re.compile(r'^######\s*(.+)')
         # gets the title pattern, >> title
-        self.title_pattern = re.compile(r'^\>\>\s*(.+)')
+        self.title_pattern = re.compile(r'^##\s*(.+)')
+        self.scene_pattern = re.compile(r'^#####\s*(.+)')
         self.comment_pattern = re.compile(r'^#\s*(.+)')
         self.name_pattern = re.compile(r'(^[A-Z][A-Z].+?)(?::(.+?))?\s*$')
         self.menu_pattern = re.compile(r'(^\*.+?)(?::(.+?))?\s*$')
@@ -60,14 +62,16 @@ class Parser():
         # line = line.strip()  # remove leading spaces for easier parsing
         if (m := self.jump_pattern.match(line)):
             l = self._parse_jump(m)
-        elif (m := self.oldSpoken_pattern.match(line)):
-            l = self._parse_oldSpoken(m)
         elif (m := self.command_pattern.match(line)):
             l = self._parse_commands(m)
+        elif (m := self.oldSpoken_pattern.match(line)):
+            l = self._parse_oldSpoken(m)
+        elif (m:= self.scene_pattern.match(line)):
+            l = self._parse_scene(m)
         elif (m := self.title_pattern.match(line)):
             l = self._parse_title(m)
         elif (m := self.comment_pattern.match(line)):
-            l = self._parse_comment(line)
+            l = self._parse_comment(m)
         elif (m := self.name_pattern.match(line)):
             self._parse_name(m)
             l = ''  # no output for this line
@@ -125,16 +129,35 @@ class Parser():
         :return: parsed line
         :rtype: str
         """
-        
+        print("je teste")
         # get the label from the matcher
         self.indent_level = 1
         label = matcher[1]
         
-        # swap spaces with underscores
-        label = label.replace(' ', '_')
+        # swap spaces with underscores and lowercase the label for better renpy nomenclature
+        label = label.replace(' ', '_').lower()
         
         # produce the code and return
         output = f'label {label}:\n'  # label xyz:
+        return output
+    
+    def _parse_scene(self, matcher: re.Match) -> str:
+        """ internal function to parse a file of type scene
+
+        :param matcher: matcher from the line
+        :type matcher: re.Match
+        :return: parsed line
+        :rtype: str
+        """
+        # get the label from the matcher
+        self.indent_level = 1
+        scene = matcher[1]
+        
+        # swap spaces with underscores and lowercase the label for better renpy nomenclature
+        scene = scene.replace(' ', '_').lower()
+        
+        # produce the code and return
+        output = f'{FS}scene {scene}\n'  # scene xyz:
         return output
 
     def _parse_oldSpoken(self, matcher: re.Match) -> str:
@@ -222,19 +245,38 @@ class Parser():
         
         return output + '\n'
     
-    def _parse_commands(self, matcher: re.Match) -> str:
-        """ reads a command line and parses it somehow, todo
+    # def _parse_commands(self, matcher: re.Match) -> str:
+    #     """ reads a command line and parses it somehow, todo
 
-        :param matcher: matcher object of the contents of the command
+    #     :param matcher: matcher object of the contents of the command
+    #     :type matcher: re.Match
+    #     :return: parsed line
+    #     :rtype: str
+    #     """
+        
+    #     # don't need to figure this out just yet
+    #     # self.logger.warning(f'command not implemented: {matcher[1]}')
+    #     # return f'# {matcher[1]}\n'
+    #     return f'{FS}{matcher[1]}\n'
+    def _parse_commands(self, matcher: re.Match) -> str:
+        """ internal function to parse a file of type scene
+
+        :param matcher: matcher from the line
         :type matcher: re.Match
         :return: parsed line
         :rtype: str
         """
+        # get the label from the matcher
+        self.indent_level = 1
+        command = matcher[1]
         
-        # don't need to figure this out just yet
-        # self.logger.warning(f'command not implemented: {matcher[1]}')
-        # return f'# {matcher[1]}\n'
-        return f'{FS}{matcher[1]}\n'
+        # swap spaces with underscores and lowercase the label for better renpy nomenclature
+        command = command.lower()
+        
+        # produce the code and return
+        output = f'{FS}{command}\n'  # command xyz:
+        return output
+
 
     def _parse_menu(self, matcher: re.Match) -> str:
         """ reads a question line and parses it somehow, todo
